@@ -3,15 +3,17 @@ import csv
 from datetime import datetime
 import pytz
 
-start_year = 2016
+start_year = 2000
 end_year = 2020
 
-fields =   ['Date-Time (UTC)', 'Temperature [C]', 'Low Temperature [C]', 'High Temperature [C]', 'Pressure [hPa]', 'Humidity [%]', 'Wind Speed [m/s]',
-            'Wind Direction [deg]', 'Cloud Cover [%]', 'Precipitation Type', 'Precipitation Amount [mm]', 'Condition Description']
+output_timezone = pytz.timezone('US/Eastern')
+
+fields =   ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Temperature [C]', 'Low Temperature [C]', 'High Temperature [C]', 'Pressure [hPa]', 'Humidity [%]', 'Wind Speed [km/h]',
+            'Wind Direction [deg]', 'Cloud Cover [%]', 'Precipitation Type', 'Precipitation Amount [cm]', 'Condition Description']
 
 if __name__ == '__main__':
     
-    with open('data/BU_Weather_1971-2021.json') as file:
+    with open('data/BU_Weather_1979-2021.json') as file:
         raw_data = json.load(file)
 
     # Set up new data store dict
@@ -22,7 +24,7 @@ if __name__ == '__main__':
         
         time_no_tz = datetime.utcfromtimestamp(int(row.get('dt'))) # No timezone because UTC
         timezone = pytz.timezone('UTC')
-        time = timezone.localize(time_no_tz)
+        time = timezone.localize(time_no_tz).astimezone(output_timezone)
 
         temp = row.get('main').get('temp')
         temp_low = row.get('main').get('temp_min')
@@ -32,7 +34,7 @@ if __name__ == '__main__':
         pressure = row.get('main').get('pressure')
         humidity = row.get('main').get('humidity')
 
-        wind_speed = row.get('wind').get('speed')
+        wind_speed = row.get('wind').get('speed') * 3.6
         wind_direction = row.get('wind').get('deg')
         
         cloud_cover = row.get('clouds').get('all')
@@ -43,17 +45,17 @@ if __name__ == '__main__':
         if rain_obj is not None:
             precipitation_type = "rain"
             if rain_obj.get('1h') is not None:
-                precipitation_amount = rain_obj.get('1h')
+                precipitation_amount = rain_obj.get('1h') * 10 # mm to cm
             elif rain_obj.get('3h') is not None:
-                precipitation_amount = rain_obj.get('3h') / 3 # Divide by 3 to get avg hourly rate
+                precipitation_amount = rain_obj.get('3h') * 10 / 3 # Divide by 3 to get avg hourly rate
             else:
                 precipitation_amount = 0
         elif snow_obj is not None:
             precipitation_type = "snow"
             if snow_obj.get('1h') is not None:
-                precipitation_amount = snow_obj.get('1h')
+                precipitation_amount = snow_obj.get('1h') * 10 # mm to cm
             elif snow_obj.get('3h') is not None:
-                precipitation_amount = snow_obj.get('3h') / 3 # Divide by 3 to get avg hourly rate
+                precipitation_amount = snow_obj.get('3h') * 10 / 3 # Divide by 3 to get avg hourly rate
             else:
                 precipitation_amount = 0
         else:
@@ -66,7 +68,11 @@ if __name__ == '__main__':
             final_data[time.year] = []
 
         final_data.get(time.year).append([
-            time.strftime("%Y-%m-%d_%H:%M"),                    # Time
+            time.strftime("%Y"),
+            time.strftime("%m"),
+            time.strftime("%d"),
+            time.strftime("%H"),
+            time.strftime("%M"),
             temp,
             temp_low,
             temp_high,
@@ -79,6 +85,8 @@ if __name__ == '__main__':
             precipitation_amount,
             condition              
         ])
+        if time.month == 12 and time.day == 31 and time.hour == 23:
+            print("Finished parsing " + time.strftime('%Y'))
 
     for year in range(start_year, end_year + 1, 1):
         file_loc = "output/"
