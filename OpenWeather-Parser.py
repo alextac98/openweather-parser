@@ -152,7 +152,7 @@ if __name__ == '__main__':
     # for year in range(start_year, end_year + 1, 1):
     #     file_loc = "output/"
     #     file_name = 'BU_Weather_' + str(year) + ".csv"
-    #     with open(file_loc + file_namegit , 'w') as file:
+    #     with open(file_loc + file_name, 'w') as file:
     #         write = csv.writer(file)
     #         write.writerow(fields)
     #         write.writerows(final_data.get(year))
